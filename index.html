@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Мой Бюджет</title>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f13;
+    --card: #1a1a24;
+    --card2: #22222e;
+    --border: #2e2e3e;
+    --accent: #7c6cfa;
+    --accent2: #a594ff;
+    --green: #4ade80;
+    --red: #f87171;
+    --text: #f0eeff;
+    --muted: #8884a8;
+    --income: #4ade80;
+    --expense: #f87171;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Manrope', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+  .app { max-width: 480px; margin: 0 auto; padding-bottom: 80px; }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    padding: 20px 16px 16px;
+    position: sticky; top: 0; z-index: 100;
+    border-bottom: 1px solid var(--border);
+  }
+  .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .logo { font-family: 'Unbounded', sans-serif; font-size: 16px; color: var(--accent2); letter-spacing: -0.5px; }
+  .account-selector {
+    display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px;
+  }
+  .account-selector::-webkit-scrollbar { display: none; }
+  .acc-btn {
+    font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+    padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--card); color: var(--muted); cursor: pointer;
+    white-space: nowrap; transition: all 0.2s;
+  }
+  .acc-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* BALANCE CARD */
+  .balance-card {
+    margin: 12px 16px;
+    background: linear-gradient(135deg, #2d2060 0%, #1a1440 100%);
+    border-radius: 16px; padding: 20px;
+    border: 1px solid rgba(124,108,250,0.3);
+  }
+  .balance-label { font-size: 11px; color: var(--accent2); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px; }
+  .balance-amount { font-family: 'Unbounded', sans-serif; font-size: 28px; font-weight: 700; }
+  .balance-amount.pos { color: var(--green); }
+  .balance-amount.neg { color: var(--red); }
+  .balance-stats { display: flex; gap: 20px; margin-top: 14px; }
+  .stat { flex: 1; }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 3px; }
+  .stat-val { font-size: 13px; font-weight: 600; }
+  .stat-val.inc { color: var(--green); }
+  .stat-val.exp { color: var(--red); }
+
+  /* TABS */
+  .tabs { display: flex; margin: 0 16px 12px; background: var(--card); border-radius: 10px; padding: 3px; }
+  .tab { flex: 1; text-align: center; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); transition: all 0.2s; }
+  .tab.active { background: var(--accent); color: white; }
+
+  /* FILTER ROW */
+  .filter-row { display: flex; gap: 8px; margin: 0 16px 12px; overflow-x: auto; }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--card); color: var(--muted);
+    cursor: pointer; white-space: nowrap; transition: all 0.2s;
+  }
+  .filter-chip.active { border-color: var(--accent); color: var(--accent); }
+
+  /* TRANSACTIONS */
+  .section-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; padding: 8px 16px 6px; }
+  .tx-list { padding: 0 16px; }
+  .tx-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 11px 0; border-bottom: 1px solid var(--border);
+    animation: fadeIn 0.3s ease;
+  }
+  .tx-item:last-child { border-bottom: none; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity:1; transform: translateY(0); } }
+  .tx-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; flex-shrink: 0;
+  }
+  .tx-icon.inc { background: rgba(74,222,128,0.15); }
+  .tx-icon.exp { background: rgba(248,113,113,0.15); }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-cat { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tx-date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .tx-amount { font-size: 14px; font-weight: 700; flex-shrink: 0; }
+  .tx-amount.inc { color: var(--green); }
+  .tx-amount.exp { color: var(--red); }
+
+  /* ADD FORM */
+  .add-form {
+    margin: 0 16px; background: var(--card); border-radius: 16px;
+    padding: 16px; border: 1px solid var(--border);
+  }
+  .form-title { font-family: 'Unbounded', sans-serif; font-size: 13px; margin-bottom: 14px; color: var(--accent2); }
+  .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .form-row.col { flex-direction: column; }
+  .type-btn {
+    flex: 1; padding: 9px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--card2); color: var(--muted); font-weight: 600; font-size: 13px;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .type-btn.income.active { background: rgba(74,222,128,0.2); border-color: var(--green); color: var(--green); }
+  .type-btn.expense.active { background: rgba(248,113,113,0.2); border-color: var(--red); color: var(--red); }
+  .form-input {
+    width: 100%; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--border); background: var(--card2);
+    color: var(--text); font-family: 'Manrope', sans-serif; font-size: 14px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .form-input:focus { border-color: var(--accent); }
+  .form-input::placeholder { color: var(--muted); }
+  select.form-input option { background: var(--card2); }
+  .submit-btn {
+    width: 100%; padding: 12px; border-radius: 10px; border: none;
+    background: var(--accent); color: white; font-family: 'Unbounded', sans-serif;
+    font-size: 13px; cursor: pointer; transition: opacity 0.2s; margin-top: 4px;
+  }
+  .submit-btn:active { opacity: 0.8; }
+
+  /* CATEGORIES VIEW */
+  .cat-list { padding: 0 16px; }
+  .cat-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 11px 0; border-bottom: 1px solid var(--border);
+  }
+  .cat-name { font-size: 13px; font-weight: 600; }
+  .cat-amount { font-size: 13px; font-weight: 700; }
+  .cat-bar-wrap { height: 4px; background: var(--border); border-radius: 2px; margin-top: 4px; }
+  .cat-bar { height: 4px; border-radius: 2px; transition: width 0.4s ease; }
+
+  /* BOTTOM NAV */
+  .bottom-nav {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: var(--card); border-top: 1px solid var(--border);
+    display: flex; padding: 8px 0 12px;
+  }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; cursor: pointer; padding: 4px; color: var(--muted); transition: color 0.2s; border: none; background: none; }
+  .nav-btn.active { color: var(--accent2); }
+  .nav-icon { font-size: 22px; line-height: 1; }
+  .nav-label { font-size: 10px; font-weight: 600; }
+
+  .empty { text-align: center; padding: 40px 16px; color: var(--muted); }
+  .empty-icon { font-size: 40px; margin-bottom: 10px; }
+
+  .load-more { display: block; margin: 12px 16px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; width: calc(100% - 32px); }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">💰 Мій Бюджет</div>
+    </div>
+    <div class="account-selector" id="accountSelector"></div>
+  </div>
+
+  <!-- CONTENT -->
+  <div id="mainContent"></div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" id="navHistory" onclick="switchView('history')">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Операції</span>
+    </button>
+    <button class="nav-btn" id="navStats" onclick="switchView('stats')">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Статистика</span>
+    </button>
+    <button class="nav-btn" id="navAdd" onclick="switchView('add')">
+      <span class="nav-icon">➕</span>
+      <span class="nav-label">Додати</span>
+    </button>
+  </div>
+</div>
+
+<script>
+// ---- DATA ----
+const IMPORTED = [{"id":1,"date":"2024-01-22","category":"22.01.24","account":"Мы 24","amount":20708,"currency":"UAH"},{"id":2,"date":"2024-02-03","category":"02.02","account":"Мы 24","amount":2438,"currency":"UAH"},{"id":3,"date":"2024-02-03","category":"Бн поменял дом","account":"Мы 24","amount":-1052,"currency":"UAH"},{"id":4,"date":"2024-02-05","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":5,"date":"2024-02-06","category":"Доп зп","account":"Мы 24","amount":-1000,"currency":"UAH"},{"id":6,"date":"2024-02-07","category":"Разменял дом расходы","account":"Мы 24","amount":-1200,"currency":"UAH"},{"id":7,"date":"2024-02-11","category":"Разменял дом расходы","account":"Мы 24","amount":-300,"currency":"UAH"},{"id":8,"date":"2024-02-11","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":9,"date":"2024-02-12","category":"Бн поменял дом","account":"Мы 24","amount":-526,"currency":"UAH"},{"id":10,"date":"2024-02-13","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":11,"date":"2024-02-13","category":"Отпуск лето 2024","account":"Мы 24","amount":-1052,"currency":"UAH"},{"id":12,"date":"2024-02-14","category":"Бн поменял дом","account":"Мы 24","amount":-710,"currency":"UAH"},{"id":13,"date":"2024-02-15","category":"Видио кадокан","account":"Мы 24","amount":-670,"currency":"UAH"},{"id":14,"date":"2024-02-16","category":"15.02.24","account":"Мы 24","amount":9296,"currency":"UAH"},{"id":15,"date":"2024-02-19","category":"Лето 24","account":"Мы 24","amount":-2200,"currency":"UAH"},{"id":16,"date":"2024-02-20","category":"Бн поменял дом","account":"Мы 24","amount":-575,"currency":"UAH"},{"id":17,"date":"2024-02-25","category":"Бн поменял дом","account":"Мы 24","amount":-525,"currency":"UAH"},{"id":18,"date":"2024-02-25","category":"Зп сайт кодокан","account":"Мы 24","amount":-400,"currency":"UAH"},{"id":19,"date":"2024-02-28","category":"Разменял дом расходы","account":"Мы 24","amount":-700,"currency":"UAH"},{"id":20,"date":"2024-02-28","category":"Бн поменял дом","account":"Мы 24","amount":-1300,"currency":"UAH"},{"id":21,"date":"2024-02-29","category":"Зп сайт кодокан","account":"Мы 24","amount":-400,"currency":"UAH"},{"id":22,"date":"2024-03-02","category":"01.02","account":"Мы 24","amount":3933,"currency":"UAH"},{"id":23,"date":"2024-03-03","category":"Разменял дом расходы","account":"Мы 24","amount":-300,"currency":"UAH"},{"id":24,"date":"2024-03-03","category":"Успенская 119","account":"Мы 24","amount":-420,"currency":"UAH"},{"id":25,"date":"2024-03-04","category":"Разменял дом расходы","account":"Мы 24","amount":-520,"currency":"UAH"},{"id":26,"date":"2024-03-04","category":"Доп зп","account":"Мы 24","amount":-1300,"currency":"UAH"},{"id":27,"date":"2024-03-05","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":28,"date":"2024-03-08","category":"Разменял дом расходы","account":"Мы 24","amount":-260,"currency":"UAH"},{"id":29,"date":"2024-03-09","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":30,"date":"2024-03-10","category":"Дети спорт","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":31,"date":"2024-03-10","category":"Бн поменял дом","account":"Мы 24","amount":-150,"currency":"UAH"},{"id":32,"date":"2024-03-11","category":"Разменял дом расходы","account":"Мы 24","amount":-910,"currency":"UAH"},{"id":33,"date":"2024-03-11","category":"Дети спорт","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":34,"date":"2024-03-12","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":35,"date":"2024-03-13","category":"Разменял дом расходы","account":"Мы 24","amount":-1290,"currency":"UAH"},{"id":36,"date":"2024-03-17","category":"Бн поменял дом","account":"Мы 24","amount":-400,"currency":"UAH"},{"id":37,"date":"2024-03-18","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":38,"date":"2024-03-20","category":"Помощ мопед !","account":"Мы 24","amount":-470,"currency":"UAH"},{"id":39,"date":"2024-03-20","category":"20.03","account":"Мы 24","amount":11384,"currency":"UAH"},{"id":40,"date":"2024-03-20","category":"Бн поменял дом","account":"Мы 24","amount":-257,"currency":"UAH"},{"id":41,"date":"2024-03-21","category":"Налоги и за","account":"Мы 24","amount":-1550,"currency":"UAH"},{"id":42,"date":"2024-03-22","category":"Успенская 119","account":"Мы 24","amount":-260,"currency":"UAH"},{"id":43,"date":"2024-03-22","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":44,"date":"2024-03-23","category":"Зп сайт кодокан","account":"Мы 24","amount":-300,"currency":"UAH"},{"id":45,"date":"2024-03-26","category":"Разменял дом расходы","account":"Мы 24","amount":-700,"currency":"UAH"},{"id":46,"date":"2024-03-26","category":"Разменял дом расходы","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":47,"date":"2024-03-28","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":48,"date":"2024-03-28","category":"Разменял дом расходы","account":"Мы 24","amount":-255,"currency":"UAH"},{"id":49,"date":"2024-03-31","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":50,"date":"2024-03-31","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":51,"date":"2024-04-01","category":"Дети спорт","account":"Мы 24","amount":-600,"currency":"UAH"},{"id":52,"date":"2024-04-02","category":"Бн поменял дом","account":"Мы 24","amount":-345,"currency":"UAH"},{"id":53,"date":"2024-04-02","category":"02.04","account":"Мы 24","amount":14104,"currency":"UAH"},{"id":54,"date":"2024-04-02","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":55,"date":"2024-04-04","category":"Бн поменял дом","account":"Мы 24","amount":-130,"currency":"UAH"},{"id":56,"date":"2024-04-04","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":57,"date":"2024-04-05","category":"Бн поменял дом","account":"Мы 24","amount":-500,"currency":"UAH"},{"id":58,"date":"2024-04-07","category":"Разменял дом расходы","account":"Мы 24","amount":-650,"currency":"UAH"},{"id":59,"date":"2024-04-08","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":60,"date":"2024-04-08","category":"Налоги и за","account":"Мы 24","amount":-760,"currency":"UAH"},{"id":61,"date":"2024-04-08","category":"Доп зп","account":"Мы 24","amount":-550,"currency":"UAH"},{"id":62,"date":"2024-04-08","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":63,"date":"2024-04-09","category":"Разменял дом расходы","account":"Мы 24","amount":-300,"currency":"UAH"},{"id":64,"date":"2024-04-10","category":"Разменял дом расходы","account":"Мы 24","amount":-511,"currency":"UAH"},{"id":65,"date":"2024-04-11","category":"Разменял дом расходы","account":"Мы 24","amount":-500,"currency":"UAH"},{"id":66,"date":"2024-04-12","category":"Бн поменял дом","account":"Мы 24","amount":-355,"currency":"UAH"},{"id":67,"date":"2024-04-12","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":68,"date":"2024-04-16","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":69,"date":"2024-04-16","category":"Бн поменял дом","account":"Мы 24","amount":-130,"currency":"UAH"},{"id":70,"date":"2024-04-19","category":"Разменял дом расходы","account":"Мы 24","amount":-505,"currency":"UAH"},{"id":71,"date":"2024-04-19","category":"Разменял дом расходы","account":"Мы 24","amount":-1145,"currency":"UAH"},{"id":72,"date":"2024-04-20","category":"Разменял дом расходы","account":"Мы 24","amount":-275,"currency":"UAH"},{"id":73,"date":"2024-04-23","category":"Разменял дом расходы","account":"Мы 24","amount":-1895,"currency":"UAH"},{"id":74,"date":"2024-04-23","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":75,"date":"2024-04-25","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":76,"date":"2024-04-26","category":"Разменял дом расходы","account":"Мы 24","amount":-255,"currency":"UAH"},{"id":77,"date":"2024-04-27","category":"Разменял дом расходы","account":"Мы 24","amount":-250,"currency":"UAH"},{"id":78,"date":"2024-04-27","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":79,"date":"2024-04-28","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":80,"date":"2024-04-29","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":81,"date":"2024-04-30","category":"Бн поменял дом","account":"Мы 24","amount":-650,"currency":"UAH"},{"id":82,"date":"2024-05-01","category":"01.05","account":"Мы 24","amount":16715,"currency":"UAH"},{"id":83,"date":"2024-05-01","category":"Зп сайт кодокан","account":"Мы 24","amount":-500,"currency":"UAH"},{"id":84,"date":"2024-05-02","category":"Разменял дом расходы","account":"Мы 24","amount":-1100,"currency":"UAH"},{"id":85,"date":"2024-05-02","category":"Разменял дом расходы","account":"Мы 24","amount":-255,"currency":"UAH"},{"id":86,"date":"2024-05-02","category":"В евро ","account":"Мы 24","amount":-4400,"currency":"UAH"},{"id":87,"date":"2024-05-03","category":"Разменял дом расходы","account":"Мы 24","amount":-1010,"currency":"UAH"},{"id":88,"date":"2024-05-04","category":"Бн поменял дом","account":"Мы 24","amount":-650,"currency":"UAH"},{"id":89,"date":"2024-05-06","category":"Разменял дом расходы","account":"Мы 24","amount":-125,"currency":"UAH"},{"id":90,"date":"2024-05-07","category":"Бн поменял дом","account":"Мы 24","amount":-505,"currency":"UAH"},{"id":91,"date":"2024-05-08","category":"Разменял дом расходы","account":"Мы 24","amount":-255,"currency":"UAH"},{"id":92,"date":"2024-05-08","category":"Разменял дом расходы","account":"Мы 24","amount":-2500,"currency":"UAH"},{"id":93,"date":"2024-05-10","category":"Разменял дом расходы","account":"Мы 24","amount":-505,"currency":"UAH"},{"id":94,"date":"2024-05-10","category":"Налоги и за","account":"Мы 24","amount":-916,"currency":"UAH"},{"id":95,"date":"2024-05-11","category":"Бн поменял дом","account":"Мы 24","amount":-130,"currency":"UAH"},{"id":96,"date":"2024-05-14","category":"Разменял дом расходы","account":"Мы 24","amount":-505,"currency":"UAH"},{"id":97,"date":"2024-05-16","category":"Разменял дом расходы","account":"Мы 24","amount":-260,"currency":"UAH"},{"id":98,"date":"2024-05-16","category":"15.05","account":"Мы 24","amount":11381,"currency":"UAH"},{"id":99,"date":"2024-05-17","category":"Разменял дом расходы","account":"Мы 24","amount":-1005,"currency":"UAH"},{"id":100,"date":"2024-05-17","category":"Разменял дом расходы","account":"Мы 24","amount":-705,"currency":"UAH"},{"id":101,"date":"2024-05-19","category":"Разменял дом расходы","account":"Мы 24","amount":-1000,"currency":"UAH"},{"id":102,"date":"2024-05-21","category":"Разменял дом расходы","account":"Мы 24","amount":-375,"currency":"UAH"},{"id":103,"date":"2024-05-22","category":"Разменял дом расходы","account":"Мы 24","amount":-375,"currency":"UAH"},{"id":104,"date":"2024-05-23","category":"Бн поменял дом","account":"Мы 24","amount":-175,"currency":"UAH"},{"id":105,"date":"2024-05-25","category":"Разменял дом расходы","account":"Мы 24","amount":-255,"currency":"UAH"},{"id":106,"date":"2024-05-26","category":"Разменял дом расходы","account":"Мы 24","amount":-800,"currency":"UAH"},{"id":107,"date":"2024-05-27","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":108,"date":"2024-05-28","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":109,"date":"2024-05-29","category":"Разменял дом расходы","account":"Мы 24","amount":-605,"currency":"UAH"},{"id":110,"date":"2024-05-30","category":"Разменял дом расходы","account":"Мы 24","amount":-450,"currency":"UAH"},{"id":111,"date":"2024-05-31","category":"Разменял дом расходы","account":"Мы 24","amount":-590,"currency":"UAH"},{"id":112,"date":"2024-06-06","category":"Налоги и за","account":"Мы 24","amount":-945,"currency":"UAH"},{"id":113,"date":"2024-06-08","category":"Бн поменял дом","account":"Мы 24","amount":-625,"currency":"UAH"},{"id":114,"date":"2024-06-11","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":115,"date":"2024-06-11","category":"Зп сайт кодокан","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":116,"date":"2024-06-11","category":"Зп сайт кодокан","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":117,"date":"2024-06-14","category":"Разменял дом расходы","account":"Мы 24","amount":-125,"currency":"UAH"},{"id":118,"date":"2024-06-14","category":"Бн поменял дом","account":"Мы 24","amount":-125,"currency":"UAH"},{"id":119,"date":"2024-06-18","category":"18.06","account":"Мы 24","amount":10154,"currency":"UAH"},{"id":120,"date":"2024-06-19","category":"Бн поменял дом","account":"Мы 24","amount":-300,"currency":"UAH"},{"id":121,"date":"2024-06-21","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":122,"date":"2024-06-21","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":123,"date":"2024-06-22","category":"Успенская 119","account":"Мы 24","amount":-2600,"currency":"UAH"},{"id":124,"date":"2024-06-25","category":"Бн поменял дом","account":"Мы 24","amount":-400,"currency":"UAH"},{"id":125,"date":"2024-06-26","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":126,"date":"2024-06-27","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":127,"date":"2024-06-27","category":"Разменял дом расходы","account":"Мы 24","amount":-395,"currency":"UAH"},{"id":128,"date":"2024-06-28","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":129,"date":"2024-06-29","category":"Разменял дом расходы","account":"Мы 24","amount":-1100,"currency":"UAH"},{"id":130,"date":"2024-06-30","category":"30.06","account":"Мы 24","amount":2486,"currency":"UAH"},{"id":131,"date":"2024-07-01","category":"Доп зп","account":"Мы 24","amount":-1300,"currency":"UAH"},{"id":132,"date":"2024-07-01","category":"Разменял дом расходы","account":"Мы 24","amount":-615,"currency":"UAH"},{"id":133,"date":"2024-07-05","category":"Разменял дом расходы","account":"Мы 24","amount":-490,"currency":"UAH"},{"id":134,"date":"2024-07-18","category":"Разменял дом расходы","account":"Мы 24","amount":-360,"currency":"UAH"},{"id":135,"date":"2024-07-18","category":"Лето 24","account":"Мы 24","amount":-1216,"currency":"UAH"},{"id":136,"date":"2024-07-18","category":"18.06","account":"Мы 24","amount":7453,"currency":"UAH"},{"id":137,"date":"2024-07-18","category":"18.06","account":"Мы 24","amount":2611,"currency":"UAH"},{"id":138,"date":"2024-07-19","category":"Успенская 119","account":"Мы 24","amount":-1200,"currency":"UAH"},{"id":139,"date":"2024-07-31","category":"Успенская 119","account":"Мы 24","amount":-1807,"currency":"UAH"},{"id":140,"date":"2024-07-31","category":"Зп сайт кодокан","account":"Мы 24","amount":-400,"currency":"UAH"},{"id":141,"date":"2024-08-01","category":"Налоги и за","account":"Мы 24","amount":-1000,"currency":"UAH"},{"id":142,"date":"2024-08-01","category":"01.08","account":"Мы 24","amount":5582,"currency":"UAH"},{"id":143,"date":"2024-08-15","category":"Разменял дом расходы","account":"Мы 24","amount":-385,"currency":"UAH"},{"id":144,"date":"2024-08-16","category":"Папа","account":"Мы 24","amount":-245,"currency":"UAH"},{"id":145,"date":"2024-08-17","category":"Бн поменял дом","account":"Мы 24","amount":-245,"currency":"UAH"},{"id":146,"date":"2024-08-18","category":"Бн поменял дом","account":"Мы 24","amount":-245,"currency":"UAH"},{"id":147,"date":"2024-08-19","category":"Успенская 119","account":"Мы 24","amount":-2175,"currency":"UAH"},{"id":148,"date":"2024-08-19","category":"Дети спорт","account":"Мы 24","amount":-400,"currency":"UAH"},{"id":149,"date":"2024-08-19","category":"Бн поменял дом","account":"Мы 24","amount":-245,"currency":"UAH"},{"id":150,"date":"2024-08-21","category":"Бн поменял дом","account":"Мы 24","amount":-245,"currency":"UAH"},{"id":151,"date":"2024-08-23","category":"Бн поменял дом","account":"Мы 24","amount":-245,"currency":"UAH"},{"id":152,"date":"2024-08-23","category":"Разменял дом расходы","account":"Мы 24","amount":-605,"currency":"UAH"},{"id":153,"date":"2024-08-23","category":"Разменял дом расходы","account":"Мы 24","amount":-538,"currency":"UAH"},{"id":154,"date":"2024-08-26","category":"Бн поменял дом","account":"Мы 24","amount":-145,"currency":"UAH"},{"id":155,"date":"2024-08-29","category":"Разменял дом расходы","account":"Мы 24","amount":-500,"currency":"UAH"},{"id":156,"date":"2024-09-03","category":"Доп зп","account":"Мы 24","amount":-730,"currency":"UAH"},{"id":157,"date":"2024-09-03","category":"Успенская 119","account":"Мы 24","amount":-120,"currency":"UAH"},{"id":158,"date":"2024-09-03","category":"Разменял дом расходы","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":159,"date":"2024-09-04","category":"Разменял дом расходы","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":160,"date":"2024-09-05","category":"Разменял дом расходы","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":161,"date":"2024-09-06","category":"Разменял дом расходы","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":162,"date":"2024-09-10","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":163,"date":"2024-09-12","category":"Дети спорт","account":"Мы 24","amount":-300,"currency":"UAH"},{"id":164,"date":"2024-09-12","category":"Разменял дом расходы","account":"Мы 24","amount":-730,"currency":"UAH"},{"id":165,"date":"2024-09-12","category":"Разменял дом расходы","account":"Мы 24","amount":-315,"currency":"UAH"},{"id":166,"date":"2024-09-16","category":"Разменял дом расходы","account":"Мы 24","amount":-3000,"currency":"UAH"},{"id":167,"date":"2024-09-16","category":"Дети спорт","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":168,"date":"2024-09-24","category":"Папа","account":"Мы 24","amount":-240,"currency":"UAH"},{"id":169,"date":"2024-09-26","category":"Разменял дом расходы","account":"Мы 24","amount":-500,"currency":"UAH"},{"id":170,"date":"2024-09-27","category":"Разменял дом расходы","account":"Мы 24","amount":-1090,"currency":"UAH"},{"id":171,"date":"2024-09-28","category":"Разменял дом расходы","account":"Мы 24","amount":-490,"currency":"UAH"},{"id":172,"date":"2024-10-01","category":"Разменял дом расходы","account":"Мы 24","amount":-700,"currency":"UAH"},{"id":173,"date":"2024-10-02","category":"01.10","account":"Мы 24","amount":17157,"currency":"UAH"},{"id":174,"date":"2024-10-03","category":"Бн поменял дом","account":"Мы 24","amount":-365,"currency":"UAH"},{"id":175,"date":"2024-10-04","category":"Разменял дом расходы","account":"Мы 24","amount":-970,"currency":"UAH"},{"id":176,"date":"2024-10-07","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":177,"date":"2024-10-07","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":178,"date":"2024-10-07","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":179,"date":"2024-10-08","category":"Зп сайт кодокан","account":"Мы 24","amount":-250,"currency":"UAH"},{"id":180,"date":"2024-10-10","category":"Разменял дом расходы","account":"Мы 24","amount":-1451,"currency":"UAH"},{"id":181,"date":"2024-10-10","category":"Зп сайт кодокан","account":"Мы 24","amount":-215,"currency":"UAH"},{"id":182,"date":"2024-10-14","category":"Папа","account":"Мы 24","amount":-245,"currency":"UAH"},{"id":183,"date":"2024-10-14","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":184,"date":"2024-10-15","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":185,"date":"2024-10-17","category":"Разменял дом расходы","account":"Мы 24","amount":-365,"currency":"UAH"},{"id":186,"date":"2024-10-17","category":"Разменял дом расходы","account":"Мы 24","amount":-145,"currency":"UAH"},{"id":187,"date":"2024-10-20","category":"Бн поменял дом","account":"Мы 24","amount":-578,"currency":"UAH"},{"id":188,"date":"2024-10-21","category":"Разменял дом расходы","account":"Мы 24","amount":-2000,"currency":"UAH"},{"id":189,"date":"2024-10-22","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":190,"date":"2024-10-22","category":"21.10","account":"Мы 24","amount":8697,"currency":"UAH"},{"id":191,"date":"2024-10-22","category":"21.10","account":"Мы 24","amount":4615,"currency":"UAH"},{"id":192,"date":"2024-10-28","category":"Бн поменял дом","account":"Мы 24","amount":-365,"currency":"UAH"},{"id":193,"date":"2024-10-29","category":"Бн поменял дом","account":"Мы 24","amount":-170,"currency":"UAH"},{"id":194,"date":"2024-11-01","category":"Дети спорт","account":"Мы 24","amount":-500,"currency":"UAH"},{"id":195,"date":"2024-11-01","category":"01.11","account":"Мы 24","amount":5252,"currency":"UAH"},{"id":196,"date":"2024-11-01","category":"01.11","account":"Мы 24","amount":1796,"currency":"UAH"},{"id":197,"date":"2024-11-04","category":"Бн поменял дом","account":"Мы 24","amount":-850,"currency":"UAH"},{"id":198,"date":"2024-11-06","category":"Разменял дом расходы","account":"Мы 24","amount":-300,"currency":"UAH"},{"id":199,"date":"2024-11-06","category":"Бн поменял дом","account":"Мы 24","amount":-120,"currency":"UAH"},{"id":200,"date":"2024-11-08","category":"Бн поменял дом","account":"Мы 24","amount":-725,"currency":"UAH"},{"id":201,"date":"2024-11-09","category":"Бн поменял дом","account":"Мы 24","amount":-120,"currency":"UAH"},{"id":202,"date":"2024-11-09","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":203,"date":"2024-11-11","category":"Бн поменял дом","account":"Мы 24","amount":-1550,"currency":"UAH"},{"id":204,"date":"2024-11-11","category":"Налоги и за","account":"Мы 24","amount":-1550,"currency":"UAH"},{"id":205,"date":"2024-11-14","category":"Зп сайт кодокан","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":206,"date":"2024-11-14","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":207,"date":"2024-11-14","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":208,"date":"2024-11-19","category":"Разменял дом расходы","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":209,"date":"2024-11-19","category":"Разменял дом расходы","account":"Мы 24","amount":-728,"currency":"UAH"},{"id":210,"date":"2024-11-23","category":"Бн поменял дом","account":"Мы 24","amount":-7180,"currency":"UAH"},{"id":211,"date":"2024-11-23","category":"Разменял дом расходы","account":"Мы 24","amount":-965,"currency":"UAH"},{"id":212,"date":"2024-11-26","category":"Бн поменял дом","account":"Мы 24","amount":-2400,"currency":"UAH"},{"id":213,"date":"2024-11-30","category":"Бн поменял дом","account":"Мы 24","amount":-575,"currency":"UAH"},{"id":214,"date":"2024-12-01","category":"Успенская 119","account":"Мы 24","amount":-1200,"currency":"UAH"},{"id":215,"date":"2024-12-01","category":"01.12","account":"Мы 24","amount":11222,"currency":"UAH"},{"id":216,"date":"2024-12-01","category":"01.12","account":"Мы 24","amount":5124,"currency":"UAH"},{"id":217,"date":"2024-12-02","category":"Бн поменял дом","account":"Мы 24","amount":-2120,"currency":"UAH"},{"id":218,"date":"2024-12-05","category":"Зп сайт кодокан","account":"Мы 24","amount":-435,"currency":"UAH"},{"id":219,"date":"2024-12-07","category":"Налоги и за","account":"Мы 24","amount":-980,"currency":"UAH"},{"id":220,"date":"2024-12-08","category":"Бн поменял дом","account":"Мы 24","amount":-360,"currency":"UAH"},{"id":221,"date":"2024-12-09","category":"Разменял дом расходы","account":"Мы 24","amount":-1370,"currency":"UAH"},{"id":222,"date":"2024-12-10","category":"Разменял дом расходы","account":"Мы 24","amount":-1200,"currency":"UAH"},{"id":223,"date":"2024-12-10","category":"Бн поменял дом","account":"Мы 24","amount":-1320,"currency":"UAH"},{"id":224,"date":"2024-12-13","category":"Бн поменял дом","account":"Мы 24","amount":-1750,"currency":"UAH"},{"id":225,"date":"2024-12-14","category":"Зп сайт кодокан","account":"Мы 24","amount":-310,"currency":"UAH"},{"id":226,"date":"2024-12-15","category":"Разменял дом расходы","account":"Мы 24","amount":-2525,"currency":"UAH"},{"id":227,"date":"2024-12-20","category":"Разменял дом расходы","account":"Мы 24","amount":-480,"currency":"UAH"},{"id":228,"date":"2024-12-20","category":"Бн поменял дом","account":"Мы 24","amount":-200,"currency":"UAH"},{"id":229,"date":"2024-12-22","category":"Бн поменял дом","account":"Мы 24","amount":-100,"currency":"UAH"},{"id":230,"date":"2024-12-23","category":"Бн поменял дом","account":"Мы 24","amount":-120,"currency":"UAH"},{"id":231,"date":"2024-12-23","category":"Папа","account":"Мы 24","amount":-240,"currency":"UAH"},{"id":232,"date":"2024-12-23","category":"23.12","account":"Мы 24","amount":10146,"currency":"UAH"},{"id":233,"date":"2024-12-23","category":"23.12","account":"Мы 24","amount":4792,"currency":"UAH"},{"id":234,"date":"2024-12-25","category":"Отпуск аква дом ","account":"Мы 24","amount":-12745,"currency":"UAH"},{"id":235,"date":"2024-12-28","category":"Отпуск аква дом ","account":"Мы 24","amount":-250,"currency":"UAH"},{"id":236,"date":"2025-01-03","category":"01.01.25","account":"Мы 24","amount":5437,"currency":"UAH"},{"id":237,"date":"2025-01-13","category":"Разменял дом расходы","account":"Мы 24","amount":-1162,"currency":"UAH"},{"id":238,"date":"2025-01-13","category":"Отпуск аква дом ","account":"Мы 24","amount":-4761,"currency":"UAH"},{"id":239,"date":"2025-01-15","category":"Бн поменял дом","account":"Мы 24","amount":-235,"currency":"UAH"},{"id":240,"date":"2025-01-27","category":"Бн поменял дом","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":241,"date":"2025-01-27","category":"Налоги и за","account":"Мы 25","amount":-1100,"currency":"UAH"},{"id":242,"date":"2025-01-27","category":"Бн поменял дом","account":"Мы 25","amount":-235,"currency":"UAH"},{"id":243,"date":"2025-01-30","category":"Бн поменял дом","account":"Мы 25","amount":-235,"currency":"UAH"},{"id":244,"date":"2025-02-03","category":"Разменял дом расходы","account":"Мы 25","amount":-395,"currency":"UAH"},{"id":245,"date":"2025-02-03","category":"Зп сайт кодокан","account":"Мы 25","amount":-335,"currency":"UAH"},{"id":246,"date":"2025-02-03","category":"Разменял дом расходы","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":247,"date":"2025-02-03","category":"Кредит Гена ","account":"Мы 25","amount":-850,"currency":"UAH"},{"id":248,"date":"2025-02-04","category":"04.02.25","account":"Мы 25","amount":4385,"currency":"UAH"},{"id":249,"date":"2025-02-04","category":"Бн поменял дом","account":"Мы 25","amount":-235,"currency":"UAH"},{"id":250,"date":"2025-02-04","category":"Папа","account":"Мы 25","amount":-235,"currency":"UAH"},{"id":251,"date":"2025-02-04","category":"Камера кодакан","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":252,"date":"2025-02-05","category":"","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":253,"date":"2025-02-06","category":"Бн поменял дом","account":"Мы 25","amount":-1150,"currency":"UAH"},{"id":254,"date":"2025-02-09","category":"Бн поменял дом","account":"Мы 25","amount":-365,"currency":"UAH"},{"id":255,"date":"2025-02-11","category":"Разменял дом расходы","account":"Мы 25","amount":-1450,"currency":"UAH"},{"id":256,"date":"2025-02-12","category":"Футболки кадокан ","account":"Мы 25","amount":-1205,"currency":"UAH"},{"id":257,"date":"2025-02-21","category":"Бн поменял дом","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":258,"date":"2025-02-23","category":"Разменял дом расходы","account":"Мы 25","amount":-495,"currency":"UAH"},{"id":259,"date":"2025-02-24","category":"Разменял дом расходы","account":"Мы 25","amount":-1000,"currency":"UAH"},{"id":260,"date":"2025-02-25","category":"25.02","account":"Мы 25","amount":9751,"currency":"UAH"},{"id":261,"date":"2025-02-26","category":"Разменял дом расходы","account":"Мы 25","amount":-240,"currency":"UAH"},{"id":262,"date":"2025-02-27","category":"Разменял дом расходы","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":263,"date":"2025-03-03","category":"02.03","account":"Мы 25","amount":5248,"currency":"UAH"},{"id":264,"date":"2025-03-03","category":"Валютная","account":"Мы 25","amount":-2955,"currency":"UAH"},{"id":265,"date":"2025-03-03","category":"Налоги и за","account":"Мы 25","amount":-1200,"currency":"UAH"},{"id":266,"date":"2025-03-04","category":"Доп зп","account":"Мы 25","amount":-770,"currency":"UAH"},{"id":267,"date":"2025-03-05","category":"Зп сайт кодокан","account":"Мы 25","amount":-390,"currency":"UAH"},{"id":268,"date":"2025-03-07","category":"Разменял дом расходы","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":269,"date":"2025-03-07","category":"Бн поменял дом","account":"Мы 25","amount":-722,"currency":"UAH"},{"id":270,"date":"2025-03-07","category":"Разменял дом расходы","account":"Мы 25","amount":-1752,"currency":"UAH"},{"id":271,"date":"2025-03-07","category":"Разменял дом расходы","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":272,"date":"2025-03-08","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":273,"date":"2025-03-10","category":"Разменял дом расходы","account":"Мы 25","amount":-600,"currency":"UAH"},{"id":274,"date":"2025-03-10","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":275,"date":"2025-03-10","category":"Папа","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":276,"date":"2025-03-17","category":"Разменял дом расходы","account":"Мы 25","amount":-1900,"currency":"UAH"},{"id":277,"date":"2025-03-17","category":"Разменял дом расходы","account":"Мы 25","amount":-1450,"currency":"UAH"},{"id":278,"date":"2025-03-17","category":"Разменял дом расходы","account":"Мы 25","amount":-385,"currency":"UAH"},{"id":279,"date":"2025-03-17","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":280,"date":"2025-03-18","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":281,"date":"2025-03-19","category":"Резина","account":"Мы 25","amount":-1800,"currency":"UAH"},{"id":282,"date":"2025-03-23","category":"Бн поменял дом","account":"Мы 25","amount":-150,"currency":"UAH"},{"id":283,"date":"2025-03-24","category":"Бн поменял дом","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":284,"date":"2025-03-25","category":"Бн поменял дом","account":"Мы 25","amount":-185,"currency":"UAH"},{"id":285,"date":"2025-03-26","category":"Разменял дом расходы","account":"Мы 25","amount":-100,"currency":"UAH"},{"id":286,"date":"2025-03-29","category":"Помощ От Сергий ","account":"Мы 25","amount":-3000,"currency":"UAH"},{"id":287,"date":"2025-03-31","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":288,"date":"2025-04-01","category":"Зп сайт кодокан","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":289,"date":"2025-04-01","category":"01.03","account":"Мы 25","amount":9042,"currency":"UAH"},{"id":290,"date":"2025-04-01","category":"01.03","account":"Мы 25","amount":4426,"currency":"UAH"},{"id":291,"date":"2025-04-02","category":"Доп зп","account":"Мы 25","amount":-1600,"currency":"UAH"},{"id":292,"date":"2025-04-03","category":"Разменял дом расходы","account":"Мы 25","amount":-610,"currency":"UAH"},{"id":293,"date":"2025-04-05","category":"Бн поменял дом","account":"Мы 25","amount":-250,"currency":"UAH"},{"id":294,"date":"2025-04-07","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":295,"date":"2025-04-07","category":"Разменял дом расходы","account":"Мы 25","amount":-610,"currency":"UAH"},{"id":296,"date":"2025-04-10","category":"Разменял дом расходы","account":"Мы 25","amount":-485,"currency":"UAH"},{"id":297,"date":"2025-04-14","category":"Разменял дом расходы","account":"Мы 25","amount":-2450,"currency":"UAH"},{"id":298,"date":"2025-04-15","category":"Разменял дом расходы","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":299,"date":"2025-04-17","category":"Разменял дом расходы","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":300,"date":"2025-04-18","category":"Разменял дом расходы","account":"Мы 25","amount":-365,"currency":"UAH"},{"id":301,"date":"2025-04-21","category":"Отпуск 2025 лето!","account":"Мы 25","amount":-2445,"currency":"UAH"},{"id":302,"date":"2025-04-23","category":"Разменял дом расходы","account":"Мы 25","amount":-730,"currency":"UAH"},{"id":303,"date":"2025-04-24","category":"Отпуск 2025 лето!","account":"Мы 25","amount":-4000,"currency":"UAH"},{"id":304,"date":"2025-04-25","category":"Бн поменял дом","account":"Мы 25","amount":-365,"currency":"UAH"},{"id":305,"date":"2025-04-25","category":"Бн поменял дом","account":"Мы 25","amount":-50,"currency":"UAH"},{"id":306,"date":"2025-04-26","category":"Бн поменял дом","account":"Мы 25","amount":-900,"currency":"UAH"},{"id":307,"date":"2025-04-26","category":"25.04","account":"Мы 25","amount":8234,"currency":"UAH"},{"id":308,"date":"2025-04-26","category":"25.04","account":"Мы 25","amount":4225,"currency":"UAH"},{"id":309,"date":"2025-04-28","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":310,"date":"2025-04-28","category":"Бн поменял дом","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":311,"date":"2025-04-30","category":"Отпуск 2025 лето!","account":"Мы 25","amount":-1200,"currency":"UAH"},{"id":312,"date":"2025-04-30","category":"Бн поменял дом","account":"Мы 25","amount":-650,"currency":"UAH"},{"id":313,"date":"2025-04-30","category":"Бн поменял дом","account":"Мы 25","amount":-750,"currency":"UAH"},{"id":314,"date":"2025-05-01","category":"01.05","account":"Мы 25","amount":9848,"currency":"UAH"},{"id":315,"date":"2025-05-01","category":"Бн поменял дом","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":316,"date":"2025-05-03","category":"Дети спорт","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":317,"date":"2025-05-06","category":"6.05","account":"Мы 25","amount":3000,"currency":"UAH"},{"id":318,"date":"2025-05-06","category":"Бн поменял дом","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":319,"date":"2025-05-08","category":"Бн поменял дом","account":"Мы 25","amount":-6070,"currency":"UAH"},{"id":320,"date":"2025-05-08","category":"Бн поменял дом","account":"Мы 25","amount":-1695,"currency":"UAH"},{"id":321,"date":"2025-05-08","category":"Разменял дом расходы","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":322,"date":"2025-05-12","category":"Бн поменял дом","account":"Мы 25","amount":-250,"currency":"UAH"},{"id":323,"date":"2025-05-13","category":"Разменял дом расходы","account":"Мы 25","amount":-2900,"currency":"UAH"},{"id":324,"date":"2025-05-13","category":"Видио кадокан","account":"Мы 25","amount":-940,"currency":"UAH"},{"id":325,"date":"2025-05-13","category":"Разменял дом расходы","account":"Мы 25","amount":-1000,"currency":"UAH"},{"id":326,"date":"2025-05-15","category":"Разменял дом расходы","account":"Мы 25","amount":-1500,"currency":"UAH"},{"id":327,"date":"2025-05-17","category":"Разменял дом расходы","account":"Мы 25","amount":-605,"currency":"UAH"},{"id":328,"date":"2025-05-17","category":"Разменял дом расходы","account":"Мы 25","amount":-750,"currency":"UAH"},{"id":329,"date":"2025-05-18","category":"Отпуск 2025 лето!","account":"Мы 25","amount":-4500,"currency":"UAH"},{"id":330,"date":"2025-05-19","category":"Разменял дом расходы","account":"Мы 25","amount":-725,"currency":"UAH"},{"id":331,"date":"2025-05-21","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":332,"date":"2025-05-26","category":"Бн поменял дом","account":"Мы 25","amount":-750,"currency":"UAH"},{"id":333,"date":"2025-05-27","category":"Разменял дом расходы","account":"Мы 25","amount":-2900,"currency":"UAH"},{"id":334,"date":"2025-05-30","category":"Разменял дом расходы","account":"Мы 25","amount":-150,"currency":"UAH"},{"id":335,"date":"2025-05-30","category":"Папа","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":336,"date":"2025-05-30","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":337,"date":"2025-06-02","category":"02.06","account":"Мы 25","amount":5226,"currency":"UAH"},{"id":338,"date":"2025-06-02","category":"02.06","account":"Мы 25","amount":6036,"currency":"UAH"},{"id":339,"date":"2025-06-03","category":"Разменял дом расходы","account":"Мы 25","amount":-290,"currency":"UAH"},{"id":340,"date":"2025-06-04","category":"Доп зп","account":"Мы 25","amount":-3400,"currency":"UAH"},{"id":341,"date":"2025-06-05","category":"Зп сайт кодокан","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":342,"date":"2025-06-05","category":"Дети спорт","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":343,"date":"2025-06-07","category":"Разменял дом расходы","account":"Мы 25","amount":-1940,"currency":"UAH"},{"id":344,"date":"2025-06-10","category":"Разменял дом расходы","account":"Мы 25","amount":-1000,"currency":"UAH"},{"id":345,"date":"2025-06-10","category":"Разменял дом расходы","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":346,"date":"2025-06-11","category":"Разменял дом расходы","account":"Мы 25","amount":-900,"currency":"UAH"},{"id":347,"date":"2025-06-11","category":"Разменял дом расходы","account":"Мы 25","amount":-750,"currency":"UAH"},{"id":348,"date":"2025-06-13","category":"Бн поменял дом","account":"Мы 25","amount":-250,"currency":"UAH"},{"id":349,"date":"2025-06-13","category":"Отпуск 25","account":"Мы 25","amount":-12635,"currency":"UAH"},{"id":350,"date":"2025-06-18","category":"Турнир блексикаб","account":"Мы 25","amount":-975,"currency":"UAH"},{"id":351,"date":"2025-06-18","category":"15.06","account":"Мы 25","amount":16235,"currency":"UAH"},{"id":352,"date":"2025-06-18","category":"15.06","account":"Мы 25","amount":1598,"currency":"UAH"},{"id":353,"date":"2025-06-20","category":"Отпуск 2025 лето!","account":"Мы 25","amount":-2450,"currency":"UAH"},{"id":354,"date":"2025-06-21","category":"Отпуск 25","account":"Мы 25","amount":-5400,"currency":"UAH"},{"id":355,"date":"2025-06-28","category":"Отпуск 2025 лето!","account":"Мы 25","amount":-725,"currency":"UAH"},{"id":356,"date":"2025-07-01","category":"01.07","account":"Мы 25","amount":10502,"currency":"UAH"},{"id":357,"date":"2025-07-07","category":"Отпуск 25","account":"Мы 25","amount":-464,"currency":"UAH"},{"id":358,"date":"2025-07-08","category":"Зп сайт кодокан","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":359,"date":"2025-07-20","category":"Отпуск 2025 лето!","account":"Мы 25","amount":-1200,"currency":"UAH"},{"id":360,"date":"2025-07-21","category":"Разменял дом расходы","account":"Мы 25","amount":-1520,"currency":"UAH"},{"id":361,"date":"2025-07-25","category":"Разменял дом расходы","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":362,"date":"2025-07-28","category":"Бн поменял дом","account":"Мы 25","amount":-200,"currency":"UAH"},{"id":363,"date":"2025-07-28","category":"Разменял дом расходы","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":364,"date":"2025-07-29","category":"Бн поменял дом","account":"Мы 25","amount":-385,"currency":"UAH"},{"id":365,"date":"2025-07-30","category":"31.08","account":"Мы 25","amount":19408,"currency":"UAH"},{"id":366,"date":"2025-07-30","category":"31.08","account":"Мы 25","amount":8644,"currency":"UAH"},{"id":367,"date":"2025-07-30","category":"Разменял дом расходы","account":"Мы 25","amount":-2405,"currency":"UAH"},{"id":368,"date":"2025-08-01","category":"01.08","account":"Мы 25","amount":1008,"currency":"UAH"},{"id":369,"date":"2025-08-02","category":"Бн поменял дом","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":370,"date":"2025-08-04","category":"Разменял дом расходы","account":"Мы 25","amount":-900,"currency":"UAH"},{"id":371,"date":"2025-08-06","category":"Бн поменял дом","account":"Мы 25","amount":-795,"currency":"UAH"},{"id":372,"date":"2025-08-06","category":"Зп сайт кодокан","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":373,"date":"2025-08-10","category":"Разменял дом расходы","account":"Мы 25","amount":-700,"currency":"UAH"},{"id":374,"date":"2025-08-11","category":"Разменял дом расходы","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":375,"date":"2025-08-11","category":"Бн поменял дом","account":"Мы 25","amount":-490,"currency":"UAH"},{"id":376,"date":"2025-08-13","category":"Разменял дом расходы","account":"Мы 25","amount":-2420,"currency":"UAH"},{"id":377,"date":"2025-08-15","category":"Разменял дом расходы","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":378,"date":"2025-08-16","category":"Бн поменял дом","account":"Мы 25","amount":-120,"currency":"UAH"},{"id":379,"date":"2025-08-25","category":"Бн поменял дом","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":380,"date":"2025-08-25","category":"Бн поменял дом","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":381,"date":"2025-08-25","category":"Бн поменял дом","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":382,"date":"2025-08-29","category":"Бн поменял дом","account":"Мы 25","amount":-625,"currency":"UAH"},{"id":383,"date":"2025-08-30","category":"Бн поменял дом","account":"Мы 25","amount":-750,"currency":"UAH"},{"id":384,"date":"2025-08-31","category":"Разменял дом расходы","account":"Мы 25","amount":-375,"currency":"UAH"},{"id":385,"date":"2025-09-01","category":"Дети спорт","account":"Мы 25","amount":-300,"currency":"UAH"},{"id":386,"date":"2025-09-01","category":"Разменял дом расходы","account":"Мы 25","amount":-450,"currency":"UAH"},{"id":387,"date":"2025-09-01","category":"01.09","account":"Мы 25","amount":10549,"currency":"UAH"},{"id":388,"date":"2025-09-01","category":"01.09","account":"Мы 25","amount":6048,"currency":"UAH"},{"id":389,"date":"2025-09-01","category":"Бн поменял дом","account":"Мы 25","amount":-5520,"currency":"UAH"},{"id":390,"date":"2025-09-02","category":"Доп зп","account":"Мы 25","amount":-1600,"currency":"UAH"},{"id":391,"date":"2025-09-03","category":"Зп сайт кодокан","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":392,"date":"2025-09-07","category":"Разменял дом расходы","account":"Мы 25","amount":-500,"currency":"UAH"},{"id":393,"date":"2025-09-09","category":"Разменял дом расходы","account":"Мы 25","amount":-485,"currency":"UAH"},{"id":394,"date":"2025-09-12","category":"Разменял дом расходы","account":"Мы 25","amount":-365,"currency":"UAH"},{"id":395,"date":"2025-09-15","category":"","account":"Мы 25","amount":545,"currency":"UAH"},{"id":396,"date":"2025-09-16","category":"Разменял дом расходы","account":"Мы 25","amount":-610,"currency":"UAH"},{"id":397,"date":"2025-09-18","category":"Разменял дом расходы","account":"Мы 25","amount":-975,"currency":"UAH"},{"id":398,"date":"2025-09-22","category":"Разменял дом расходы","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":399,"date":"2025-09-22","category":"Разменял дом расходы","account":"Мы 25","amount":-2435,"currency":"UAH"},{"id":400,"date":"2025-09-22","category":"Разменял дом расходы","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":401,"date":"2025-09-23","category":"Разменял дом расходы","account":"Мы 25","amount":-1000,"currency":"UAH"},{"id":402,"date":"2025-09-24","category":"Разменял дом расходы","account":"Мы 25","amount":-900,"currency":"UAH"},{"id":403,"date":"2025-09-24","category":"Разменял дом расходы","account":"Мы 25","amount":-485,"currency":"UAH"},{"id":404,"date":"2025-09-28","category":"Разменял дом расходы","account":"Мы 25","amount":-365,"currency":"UAH"},{"id":405,"date":"2025-09-28","category":"Разменял дом расходы","account":"Мы 25","amount":-1090,"currency":"UAH"},{"id":406,"date":"2025-09-29","category":"Разменял дом расходы","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":407,"date":"2025-09-29","category":"Разменял дом расходы","account":"Мы 25","amount":-285,"currency":"UAH"},{"id":408,"date":"2025-09-30","category":"Бн поменял дом","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":409,"date":"2025-10-01","category":"Разменял дом расходы","account":"Мы 25","amount":-2430,"currency":"UAH"},{"id":410,"date":"2025-10-07","category":"01.10","account":"Мы 25","amount":11380,"currency":"UAH"},{"id":411,"date":"2025-10-07","category":"01.10","account":"Мы 25","amount":3323,"currency":"UAH"},{"id":412,"date":"2025-10-08","category":"Турнир чехия ","account":"Мы 25","amount":-4000,"currency":"UAH"},{"id":413,"date":"2025-10-09","category":"Зп сайт кодокан","account":"Мы 25","amount":-400,"currency":"UAH"},{"id":414,"date":"2025-10-11","category":"Разменял дом расходы","account":"Мы 25","amount":-600,"currency":"UAH"},{"id":415,"date":"2025-10-11","category":"Разменял дом расходы","account":"Мы 25","amount":-365,"currency":"UAH"},{"id":416,"date":"2025-10-11","category":"Разменял дом расходы","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":417,"date":"2025-10-12","category":"Разменял дом расходы","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":418,"date":"2025-10-13","category":"Разменял дом расходы","account":"Мы 25","amount":-725,"currency":"UAH"},{"id":419,"date":"2025-10-16","category":"Разменял дом расходы","account":"Мы 25","amount":-2170,"currency":"UAH"},{"id":420,"date":"2025-10-20","category":"Разменял дом расходы","account":"Мы 25","amount":-2155,"currency":"UAH"},{"id":421,"date":"2025-10-28","category":"Разменял дом расходы","account":"Мы 25","amount":-1260,"currency":"UAH"},{"id":422,"date":"2025-10-28","category":"Разменял дом расходы","account":"Мы 25","amount":-480,"currency":"UAH"},{"id":423,"date":"2025-10-29","category":"Па винт","account":"Мы 25","amount":-187,"currency":"UAH"},{"id":424,"date":"2025-10-30","category":"Дети спорт","account":"Мы 25","amount":-450,"currency":"UAH"},{"id":425,"date":"2025-10-30","category":"Разменял дом расходы","account":"Мы 25","amount":-100,"currency":"UAH"},{"id":426,"date":"2025-11-02","category":"Разменял дом расходы","account":"Мы 25","amount":-240,"currency":"UAH"},{"id":427,"date":"2025-11-03","category":"03.11","account":"Мы 25","amount":16880,"currency":"UAH"},{"id":428,"date":"2025-11-03","category":"03.11","account":"Мы 25","amount":4924,"currency":"UAH"},{"id":429,"date":"2025-11-04","category":"Разменял дом расходы","account":"Мы 25","amount":-1430,"currency":"UAH"},{"id":430,"date":"2025-11-07","category":"Разменял дом расходы","account":"Мы 25","amount":-715,"currency":"UAH"},{"id":431,"date":"2025-11-07","category":"Разменял дом расходы","account":"Мы 25","amount":-660,"currency":"UAH"},{"id":432,"date":"2025-11-11","category":"Разменял дом расходы","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":433,"date":"2025-11-11","category":"Папа лечения Ира","account":"Мы 25","amount":-240,"currency":"UAH"},{"id":434,"date":"2025-11-12","category":"Разменял дом расходы","account":"Мы 25","amount":-240,"currency":"UAH"},{"id":435,"date":"2025-11-24","category":"Разменял дом расходы","account":"Мы 25","amount":-245,"currency":"UAH"},{"id":436,"date":"2025-11-24","category":"Бн поменял дом","account":"Мы 25","amount":-2000,"currency":"UAH"},{"id":437,"date":"2025-11-25","category":"Бн поменял дом","account":"Мы 25","amount":-120,"currency":"UAH"},{"id":438,"date":"2025-11-25","category":"Разменял дом расходы","account":"Мы 25","amount":-235,"currency":"UAH"},{"id":439,"date":"2025-11-27","category":"Отпуск зима 2026","account":"Мы 25","amount":-7100,"currency":"UAH"},{"id":440,"date":"2025-12-01","category":"Разменял дом расходы","account":"Мы 25","amount":-240,"currency":"UAH"},{"id":441,"date":"2025-12-01","category":"Разменял дом расходы","account":"Мы 25","amount":-650,"currency":"UAH"},{"id":442,"date":"2025-12-02","category":"01.13","account":"Мы 25","amount":12933,"currency":"UAH"},{"id":443,"date":"2025-12-02","category":"01.13","account":"Мы 25","amount":6147,"currency":"UAH"},{"id":444,"date":"2025-12-04","category":"Папа лечения Ира","account":"Мы 25","amount":-455,"currency":"UAH"},{"id":445,"date":"2025-12-12","category":"Разменял дом расходы","account":"Мы 25","amount":-1200,"currency":"UAH"},{"id":446,"date":"2025-12-12","category":"Разменял дом расходы","account":"Мы 25","amount":-1660,"currency":"UAH"},{"id":447,"date":"2025-12-12","category":"Разменял дом расходы","account":"Мы 25","amount":-710,"currency":"UAH"},{"id":448,"date":"2025-12-16","category":"Разменял дом расходы","account":"Мы 25","amount":-5700,"currency":"UAH"},{"id":449,"date":"2025-12-16","category":"Бн поменял дом","account":"Мы 25","amount":-125,"currency":"UAH"},{"id":450,"date":"2025-12-18","category":"Бн поменял дом","account":"Мы 25","amount":-125,"currency":"UAH"},{"id":451,"date":"2025-12-18","category":"Папа дом игарь","account":"Мы 25","amount":-350,"currency":"UAH"},{"id":452,"date":"2025-12-22","category":"Разменял дом расходы","account":"Мы 25","amount":-250,"currency":"UAH"},{"id":453,"date":"2025-12-22","category":"Бн поменял дом","account":"Мы 25","amount":-50,"currency":"UAH"},{"id":454,"date":"2025-12-24","category":"Отпуск зима ","account":"Мы 25","amount":-4765,"currency":"UAH"},{"id":455,"date":"2025-12-29","category":"Папа лечения Ира","account":"Мы 25","amount":-475,"currency":"UAH"},{"id":456,"date":"2025-12-30","category":"Отпуск зима ","account":"Мы 25","amount":-1180,"currency":"UAH"},{"id":457,"date":"2026-01-02","category":"02.01","account":"Мы 25","amount":9314,"currency":"UAH"},{"id":458,"date":"2026-01-02","category":"02.01","account":"Мы 25","amount":4532,"currency":"UAH"},{"id":459,"date":"2026-01-06","category":"Папа лечения Ира","account":"Мы 25","amount":-635,"currency":"UAH"},{"id":460,"date":"2026-01-08","category":"Отпуск зима ","account":"Мы 25","amount":-1180,"currency":"UAH"},{"id":461,"date":"2026-01-12","category":"Папа лечения Ира","account":"Мы 25","amount":-140,"currency":"UAH"},{"id":462,"date":"2026-01-16","category":"Разменял дом расходы","account":"Мы 25","amount":-250,"currency":"UAH"},{"id":463,"date":"2026-01-20","category":"Бн поменял дом","account":"Мы 25","amount":-770,"currency":"UAH"},{"id":464,"date":"2026-01-23","category":"Разменял дом расходы","account":"Мы 25","amount":-1850,"currency":"UAH"},{"id":465,"date":"2026-01-23","category":"Бн поменял дом","account":"Мы 25","amount":-235,"currency":"UAH"},{"id":466,"date":"2026-01-27","category":"Бн поменял дом","account":"Мы 25","amount":-4000,"currency":"UAH"},{"id":467,"date":"2026-02-01","category":"02.01","account":"Мы 26","amount":5964,"currency":"UAH"},{"id":468,"date":"2026-02-01","category":"02.01","account":"Мы 26","amount":3609,"currency":"UAH"},{"id":469,"date":"2026-02-02","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":470,"date":"2026-02-02","category":"Папа лечения Ира","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":471,"date":"2026-02-03","category":"Доп зп","account":"Мы 26","amount":-1672,"currency":"UAH"},{"id":472,"date":"2026-02-03","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":473,"date":"2026-02-04","category":"Бн поменял дом","account":"Мы 26","amount":-400,"currency":"UAH"},{"id":474,"date":"2026-02-06","category":"Разменял дом расходы","account":"Мы 26","amount":-1550,"currency":"UAH"},{"id":475,"date":"2026-02-09","category":"Разменял дом расходы","account":"Мы 26","amount":-470,"currency":"UAH"},{"id":476,"date":"2026-02-12","category":"Разменял дом расходы","account":"Мы 26","amount":-300,"currency":"UAH"},{"id":477,"date":"2026-02-12","category":"Разменял дом расходы","account":"Мы 26","amount":-600,"currency":"UAH"},{"id":478,"date":"2026-02-12","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":479,"date":"2026-02-14","category":"Разменял дом расходы","account":"Мы 26","amount":-565,"currency":"UAH"},{"id":480,"date":"2026-02-16","category":"Разменял дом расходы","account":"Мы 26","amount":-465,"currency":"UAH"},{"id":481,"date":"2026-02-17","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":482,"date":"2026-02-20","category":"Разменял дом расходы","account":"Мы 26","amount":-1400,"currency":"UAH"},{"id":483,"date":"2026-02-21","category":"Разменял дом расходы","account":"Мы 26","amount":-2325,"currency":"UAH"},{"id":484,"date":"2026-02-28","category":"Разменял дом расходы","account":"Мы 26","amount":-500,"currency":"UAH"},{"id":485,"date":"2026-02-28","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":486,"date":"2026-03-01","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":487,"date":"2026-03-03","category":"Разменял дом расходы","account":"Мы 26","amount":-635,"currency":"UAH"},{"id":488,"date":"2026-03-03","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":489,"date":"2026-03-03","category":"Разменял дом расходы","account":"Мы 26","amount":-235,"currency":"UAH"},{"id":490,"date":"2026-03-04","category":"01.02","account":"Мы 26","amount":16025,"currency":"UAH"},{"id":491,"date":"2026-03-04","category":"01.02","account":"Мы 26","amount":3144,"currency":"UAH"},{"id":492,"date":"2026-03-06","category":"Разменял дом расходы","account":"Мы 26","amount":-1150,"currency":"UAH"},{"id":493,"date":"2026-03-06","category":"Зп сайт кодокан","account":"Мы 26","amount":-400,"currency":"UAH"},{"id":494,"date":"2026-03-06","category":"Доп зп","account":"Мы 26","amount":-1000,"currency":"UAH"},{"id":495,"date":"2026-03-10","category":"Разменял дом расходы","account":"Мы 26","amount":-2280,"currency":"UAH"},{"id":496,"date":"2026-03-12","category":"Разменял дом расходы","account":"Мы 26","amount":-125,"currency":"UAH"},{"id":497,"date":"2026-03-23","category":"Разменял дом расходы","account":"Мы 26","amount":-1815,"currency":"UAH"},{"id":498,"date":"2026-03-23","category":"Разменял дом расходы","account":"Мы 26","amount":-2000,"currency":"UAH"},{"id":499,"date":"2026-03-24","category":"Разменял дом расходы","account":"Мы 26","amount":-230,"currency":"UAH"},{"id":500,"date":"2026-03-28","category":"Разменял дом расходы","account":"Мы 26","amount":-1300,"currency":"UAH"},{"id":501,"date":"2026-03-31","category":"Разменял дом расходы","account":"Мы 26","amount":-3085,"currency":"UAH"},{"id":502,"date":"2026-04-01","category":"Разменял дом расходы","account":"Мы 26","amount":-400,"currency":"UAH"},{"id":503,"date":"2026-04-01","category":"Разменял дом расходы","account":"Мы 26","amount":-400,"currency":"UAH"},{"id":504,"date":"2026-04-01","category":"01.04","account":"Мы 26","amount":20964,"currency":"UAH"},{"id":505,"date":"2026-04-01","category":"01.04","account":"Мы 26","amount":5720,"currency":"UAH"},{"id":506,"date":"2026-04-03","category":"Разменял дом расходы","account":"Мы 26","amount":-460,"currency":"UAH"},{"id":507,"date":"2026-04-05","category":"Разменял дом расходы","account":"Мы 26","amount":-1550,"currency":"UAH"},{"id":508,"date":"2026-04-05","category":"Разменял дом расходы","account":"Мы 26","amount":-1600,"currency":"UAH"},{"id":509,"date":"2026-04-05","category":"Разменял дом расходы","account":"Мы 26","amount":-460,"currency":"UAH"},{"id":510,"date":"2026-04-08","category":"Разменял дом расходы","account":"Мы 26","amount":-3335,"currency":"UAH"},{"id":511,"date":"2026-04-09","category":"Разменял дом расходы","account":"Мы 26","amount":-1155,"currency":"UAH"},{"id":512,"date":"2026-04-16","category":"Разменял дом расходы","account":"Мы 26","amount":-460,"currency":"UAH"},{"id":513,"date":"2026-04-18","category":"Разменял дом расходы","account":"Мы 26","amount":-950,"currency":"UAH"},{"id":514,"date":"2026-04-18","category":"Разменял дом расходы","account":"Мы 26","amount":-150,"currency":"UAH"},{"id":515,"date":"2026-04-22","category":"Бн поменял дом","account":"Мы 26","amount":-2612,"currency":"UAH"},{"id":516,"date":"2026-04-22","category":"Разменял дом расходы","account":"Мы 26","amount":-5475,"currency":"UAH"},{"id":517,"date":"2026-04-27","category":"Разменял дом расходы","account":"Мы 26","amount":-1145,"currency":"UAH"},{"id":518,"date":"2026-04-29","category":"Бн поменял дом","account":"Мы 26","amount":-800,"currency":"UAH"},{"id":519,"date":"2026-04-29","category":"Разменял дом расходы","account":"Мы 26","amount":-2970,"currency":"UAH"},{"id":520,"date":"2026-05-03","category":"Разменял дом расходы","account":"Мы 26","amount":-230,"currency":"UAH"},{"id":521,"date":"2026-05-03","category":"02.05","account":"Мы 26","amount":14339,"currency":"UAH"},{"id":522,"date":"2026-05-03","category":"02.05","account":"Мы 26","amount":9189,"currency":"UAH"}];
+
+// ---- STATE ----
+let transactions = JSON.parse(localStorage.getItem('budget_tx') || 'null') || [...IMPORTED];
+let nextId = Math.max(...transactions.map(t=>t.id)) + 1;
+let currentAccount = 'all';
+let currentView = 'history';
+let filterType = 'all';
+let showCount = 40;
+
+const ACCOUNTS = ['Мы 24', 'Мы 25', 'Мы 26'];
+
+function save() {
+  try { localStorage.setItem('budget_tx', JSON.stringify(transactions)); } catch(e) {}
+}
+
+function fmt(n) {
+  return Math.abs(n).toLocaleString('ru') + ' ₴';
+}
+
+function fmtDate(d) {
+  const parts = d.split('-');
+  return parts[2] + '.' + parts[1] + '.' + parts[0].slice(2);
+}
+
+function getCatIcon(cat, isIncome) {
+  if (isIncome) return '💰';
+  const c = cat.toLowerCase();
+  if (c.includes('дом')) return '🏠';
+  if (c.includes('дети') || c.includes('спорт')) return '⚽';
+  if (c.includes('налог')) return '📋';
+  if (c.includes('отпуск')) return '✈️';
+  if (c.includes('зп') || c.includes('сайт')) return '💻';
+  if (c.includes('папа') || c.includes('мама')) return '👨‍👩';
+  if (c.includes('евро') || c.includes('валют')) return '💱';
+  if (c.includes('кредит')) return '🏦';
+  if (c.includes('турнир')) return '🏆';
+  return '📌';
+}
+
+function filteredTx() {
+  let list = transactions;
+  if (currentAccount !== 'all') list = list.filter(t => t.account === currentAccount);
+  if (filterType === 'income') list = list.filter(t => t.amount > 0);
+  if (filterType === 'expense') list = list.filter(t => t.amount < 0);
+  return list.slice().sort((a,b) => b.date.localeCompare(a.date));
+}
+
+function getStats(list) {
+  const income = list.filter(t=>t.amount>0).reduce((s,t)=>s+t.amount,0);
+  const expense = list.filter(t=>t.amount<0).reduce((s,t)=>s+Math.abs(t.amount),0);
+  return { income, expense, balance: income - expense };
+}
+
+// ---- RENDER ----
+function renderAccountSelector() {
+  const el = document.getElementById('accountSelector');
+  const btns = [{ id:'all', label:'Всі рахунки' }, ...ACCOUNTS.map(a=>({id:a,label:a}))];
+  el.innerHTML = btns.map(b => `<button class="acc-btn ${currentAccount===b.id?'active':''}" onclick="selectAccount('${b.id}')">${b.label}</button>`).join('');
+}
+
+function renderHistory() {
+  const list = filteredTx();
+  const stats = getStats(transactions.filter(t => currentAccount==='all' || t.account===currentAccount));
+  const balClass = stats.balance >= 0 ? 'pos' : 'neg';
+
+  let html = `
+    <div class="balance-card">
+      <div class="balance-label">Баланс · ${currentAccount==='all'?'Всі рахунки':currentAccount}</div>
+      <div class="balance-amount ${balClass}">${stats.balance>=0?'+':'−'} ${fmt(stats.balance)}</div>
+      <div class="balance-stats">
+        <div class="stat"><div class="stat-label">Надходження</div><div class="stat-val inc">+${fmt(stats.income)}</div></div>
+        <div class="stat"><div class="stat-label">Витрати</div><div class="stat-val exp">−${fmt(stats.expense)}</div></div>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="filter-chip ${filterType==='all'?'active':''}" onclick="setFilter('all')">Всі</div>
+      <div class="filter-chip ${filterType==='income'?'active':''}" onclick="setFilter('income')">Надходження</div>
+      <div class="filter-chip ${filterType==='expense'?'active':''}" onclick="setFilter('expense')">Витрати</div>
+    </div>
+    <div class="section-title">${list.length} операцій</div>
+    <div class="tx-list">`;
+
+  const shown = list.slice(0, showCount);
+  shown.forEach(t => {
+    const isInc = t.amount > 0;
+    const icon = getCatIcon(t.category, isInc);
+    html += `<div class="tx-item">
+      <div class="tx-icon ${isInc?'inc':'exp'}">${icon}</div>
+      <div class="tx-info">
+        <div class="tx-cat">${t.category || '(без категорії)'}</div>
+        <div class="tx-date">${fmtDate(t.date)} · ${t.account}</div>
+      </div>
+      <div class="tx-amount ${isInc?'inc':'exp'}">${isInc?'+':'−'}${fmt(t.amount)}</div>
+    </div>`;
+  });
+
+  html += `</div>`;
+  if (shown.length < list.length) {
+    html += `<button class="load-more" onclick="loadMore()">Показати ще (залишилось ${list.length - shown.length})</button>`;
+  }
+  return html;
+}
+
+function renderStats() {
+  const base = currentAccount==='all' ? transactions : transactions.filter(t=>t.account===currentAccount);
+  const catMap = {};
+  base.filter(t=>t.amount<0).forEach(t => {
+    const k = t.category || '(без категорії)';
+    catMap[k] = (catMap[k]||0) + Math.abs(t.amount);
+  });
+  const cats = Object.entries(catMap).sort((a,b)=>b[1]-a[1]).slice(0,20);
+  const maxVal = cats[0]?.[1] || 1;
+  const stats = getStats(base);
+
+  let html = `
+    <div class="balance-card">
+      <div class="balance-label">Підсумок · ${currentAccount==='all'?'Всі рахунки':currentAccount}</div>
+      <div class="balance-amount ${stats.balance>=0?'pos':'neg'}">${stats.balance>=0?'+':'−'} ${fmt(stats.balance)}</div>
+      <div class="balance-stats">
+        <div class="stat"><div class="stat-label">Надходження</div><div class="stat-val inc">+${fmt(stats.income)}</div></div>
+        <div class="stat"><div class="stat-label">Витрати</div><div class="stat-val exp">−${fmt(stats.expense)}</div></div>
+      </div>
+    </div>
+    <div class="section-title">Топ витрат по категоріях</div>
+    <div class="cat-list">`;
+
+  cats.forEach(([name, val]) => {
+    const pct = Math.round(val/maxVal*100);
+    const color = '#f87171';
+    html += `<div class="cat-item">
+      <div style="flex:1;min-width:0">
+        <div class="cat-name">${name}</div>
+        <div class="cat-bar-wrap"><div class="cat-bar" style="width:${pct}%;background:${color}"></div></div>
+      </div>
+      <div class="cat-amount exp" style="margin-left:12px">−${fmt(val)}</div>
+    </div>`;
+  });
+  html += `</div>`;
+  return html;
+}
+
+function renderAdd() {
+  const cats = [...new Set(transactions.map(t=>t.category).filter(Boolean))].sort();
+  const accOptions = ACCOUNTS.map(a=>`<option value="${a}">${a}</option>`).join('');
+  const catOptions = cats.map(c=>`<option value="${c}">${c}</option>`).join('');
+
+  return `
+    <div class="add-form">
+      <div class="form-title">Нова операція</div>
+      <div class="form-row">
+        <button class="type-btn income active" id="btnIncome" onclick="setType('income')">+ Надходження</button>
+        <button class="type-btn expense" id="btnExpense" onclick="setType('expense')">− Витрата</button>
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="fAmount" type="number" placeholder="Сума (₴)" inputmode="decimal" style="flex:1">
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="fCatNew" type="text" placeholder="Категорія (нова або з списку)" list="catlist" style="flex:1">
+        <datalist id="catlist">${catOptions}</datalist>
+      </div>
+      <div class="form-row">
+        <input class="form-input" id="fDate" type="date" value="${new Date().toISOString().slice(0,10)}" style="flex:1">
+      </div>
+      <div class="form-row">
+        <select class="form-input" id="fAccount" style="flex:1">${accOptions}</select>
+      </div>
+      <button class="submit-btn" onclick="addTx()">Додати</button>
+    </div>`;
+}
+
+let addType = 'income';
+function setType(t) {
+  addType = t;
+  document.getElementById('btnIncome').className = 'type-btn income' + (t==='income'?' active':'');
+  document.getElementById('btnExpense').className = 'type-btn expense' + (t==='expense'?' active':'');
+}
+
+function addTx() {
+  const amount = parseFloat(document.getElementById('fAmount').value);
+  const cat = document.getElementById('fCatNew').value.trim();
+  const date = document.getElementById('fDate').value;
+  const account = document.getElementById('fAccount').value;
+
+  if (!amount || amount <= 0) { alert('Введіть суму'); return; }
+  if (!date) { alert('Введіть дату'); return; }
+
+  const finalAmount = addType === 'income' ? amount : -amount;
+  transactions.unshift({ id: nextId++, date, category: cat || '(без категорії)', account, amount: finalAmount, currency: 'UAH' });
+  save();
+  switchView('history');
+}
+
+function loadMore() {
+  showCount += 40;
+  renderMain();
+}
+
+function setFilter(f) {
+  filterType = f;
+  showCount = 40;
+  renderMain();
+}
+
+function selectAccount(acc) {
+  currentAccount = acc;
+  showCount = 40;
+  renderAccountSelector();
+  renderMain();
+}
+
+function switchView(v) {
+  currentView = v;
+  showCount = 40;
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('nav' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('active');
+  renderMain();
+}
+
+function renderMain() {
+  const el = document.getElementById('mainContent');
+  if (currentView === 'history') el.innerHTML = renderHistory();
+  else if (currentView === 'stats') el.innerHTML = renderStats();
+  else el.innerHTML = renderAdd();
+}
+
+// INIT
+renderAccountSelector();
+renderMain();
+</script>
+</body>
+</html>
