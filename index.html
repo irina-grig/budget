@@ -166,6 +166,16 @@
   .empty-icon { font-size: 40px; margin-bottom: 10px; }
 
   .load-more { display: block; margin: 12px 16px; padding: 10px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; width: calc(100% - 32px); }
+
+  .del-btn { background: none; border: none; color: var(--muted); font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 6px; flex-shrink: 0; transition: color 0.2s; }
+  .del-btn:active { color: var(--red); }
+
+  .backup-btn { display: block; margin: 8px 16px; padding: 10px; background: var(--card); border: 1px solid var(--accent); border-radius: 10px; color: var(--accent2); font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; width: calc(100% - 32px); }
+
+  .add-acc-row { display: flex; gap: 8px; margin: 8px 16px 0; }
+  .add-acc-input { flex: 1; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--card2); color: var(--text); font-family: 'Manrope', sans-serif; font-size: 13px; outline: none; }
+  .add-acc-input:focus { border-color: var(--accent); }
+  .add-acc-btn { padding: 8px 14px; border-radius: 10px; border: none; background: var(--accent); color: white; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -177,6 +187,10 @@
       <div class="logo">💰 Мій Бюджет</div>
     </div>
     <div class="account-selector" id="accountSelector"></div>
+    <div class="add-acc-row">
+      <input class="add-acc-input" id="newAccInput" placeholder="Новий рахунок (напр. Мы 27)">
+      <button class="add-acc-btn" onclick="addAccount()">+ Додати</button>
+    </div>
   </div>
 
   <!-- CONTENT -->
@@ -211,14 +225,70 @@ let currentView = 'history';
 let filterType = 'all';
 let showCount = 40;
 
-const ACCOUNTS = ['Мы 24', 'Мы 25', 'Мы 26'];
+let ACCOUNTS = JSON.parse(localStorage.getItem('budget_accounts') || 'null') || ['Мы 24', 'Мы 25', 'Мы 26'];
 
 function save() {
-  try { localStorage.setItem('budget_tx', JSON.stringify(transactions)); } catch(e) {}
+  try {
+    localStorage.setItem('budget_tx', JSON.stringify(transactions));
+    localStorage.setItem('budget_accounts', JSON.stringify(ACCOUNTS));
+  } catch(e) {}
 }
 
-function fmt(n) {
-  return Math.abs(n).toLocaleString('ru') + ' ₴';
+function addAccount() {
+  const input = document.getElementById('newAccInput');
+  const name = input.value.trim();
+  if (!name) { alert('Введіть назву рахунку'); return; }
+  if (ACCOUNTS.includes(name)) { alert('Такий рахунок вже є'); return; }
+  ACCOUNTS.push(name);
+  save();
+  input.value = '';
+  renderAccountSelector();
+}
+
+function deleteTx(id) {
+  if (!confirm('Видалити цю операцію?')) return;
+  transactions = transactions.filter(t => t.id !== id);
+  save();
+  renderMain();
+}
+
+function downloadBackup() {
+  const data = JSON.stringify({ transactions, accounts: ACCOUNTS }, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'budget_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadExcel() {
+  const list = currentAccount === 'all' ? transactions : transactions.filter(t => t.account === currentAccount);
+  const sorted = list.slice().sort((a,b) => b.date.localeCompare(a.date));
+  
+  // Build CSV with BOM for Excel UTF-8
+  let csv = '\uFEFF';
+  csv += 'Дата;Категорія;Рахунок;Сума;Валюта;Тип\n';
+  sorted.forEach(t => {
+    const type = t.amount > 0 ? 'Надходження' : 'Витрата';
+    const amt = Math.abs(t.amount);
+    csv += `${t.date};${t.category || ''};${t.account};${amt};${t.currency};${type}\n`;
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const accName = currentAccount === 'all' ? 'all' : currentAccount.replace(' ', '_');
+  a.download = 'budget_' + accName + '_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function fmt(n, currency) {
+  const sym = currency === 'USD' ? '$' : currency === 'EUR' ? '€' : '₴';
+  return Math.abs(n).toLocaleString('ru') + ' ' + sym;
 }
 
 function fmtDate(d) {
@@ -246,7 +316,12 @@ function filteredTx() {
   if (currentAccount !== 'all') list = list.filter(t => t.account === currentAccount);
   if (filterType === 'income') list = list.filter(t => t.amount > 0);
   if (filterType === 'expense') list = list.filter(t => t.amount < 0);
-  return list.slice().sort((a,b) => b.date.localeCompare(a.date));
+  if (searchQuery) list = list.filter(t => (t.category||'').toLowerCase().includes(searchQuery.toLowerCase()));
+  if (sortOrder === 'newest') list = list.slice().sort((a,b) => b.date.localeCompare(a.date));
+  else if (sortOrder === 'oldest') list = list.slice().sort((a,b) => a.date.localeCompare(b.date));
+  else if (sortOrder === 'biggest') list = list.slice().sort((a,b) => Math.abs(b.amount) - Math.abs(a.amount));
+  else if (sortOrder === 'smallest') list = list.slice().sort((a,b) => Math.abs(a.amount) - Math.abs(b.amount));
+  return list;
 }
 
 function getStats(list) {
@@ -281,6 +356,19 @@ function renderHistory() {
       <div class="filter-chip ${filterType==='income'?'active':''}" onclick="setFilter('income')">Надходження</div>
       <div class="filter-chip ${filterType==='expense'?'active':''}" onclick="setFilter('expense')">Витрати</div>
     </div>
+    <div style="padding:0 16px 10px;display:flex;gap:8px;">
+      <input style="flex:1;padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:Manrope,sans-serif;font-size:13px;outline:none;" 
+        placeholder="🔍 Пошук по категорії..." 
+        value="${searchQuery}"
+        oninput="setSearch(this.value)">
+      <select style="padding:8px 10px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-size:12px;outline:none;cursor:pointer;"
+        onchange="setSort(this.value)">
+        <option value="newest" ${sortOrder==='newest'?'selected':''}>Нові ↑</option>
+        <option value="oldest" ${sortOrder==='oldest'?'selected':''}>Старі ↑</option>
+        <option value="biggest" ${sortOrder==='biggest'?'selected':''}>Більші ↑</option>
+        <option value="smallest" ${sortOrder==='smallest'?'selected':''}>Менші ↑</option>
+      </select>
+    </div>
     <div class="section-title">${list.length} операцій</div>
     <div class="tx-list">`;
 
@@ -294,7 +382,8 @@ function renderHistory() {
         <div class="tx-cat">${t.category || '(без категорії)'}</div>
         <div class="tx-date">${fmtDate(t.date)} · ${t.account}</div>
       </div>
-      <div class="tx-amount ${isInc?'inc':'exp'}">${isInc?'+':'−'}${fmt(t.amount)}</div>
+      <div class="tx-amount ${isInc?'inc':'exp'}">${isInc?'+':'−'}${fmt(t.amount, t.currency)}</div>
+      <button class="del-btn" onclick="deleteTx(${t.id})" title="Видалити">🗑</button>
     </div>`;
   });
 
@@ -302,6 +391,7 @@ function renderHistory() {
   if (shown.length < list.length) {
     html += `<button class="load-more" onclick="loadMore()">Показати ще (залишилось ${list.length - shown.length})</button>`;
   }
+  html += `<button class="backup-btn" onclick="downloadBackup()">💾 Резервна копія (JSON)</button><button class="backup-btn" style="border-color:var(--green);color:var(--green);margin-top:4px" onclick="downloadExcel()">📊 Скачати в Excel (CSV)</button>`;
   return html;
 }
 
@@ -367,12 +457,19 @@ function renderAdd() {
       </div>
       <div class="form-row">
         <select class="form-input" id="fAccount" style="flex:1">${accOptions}</select>
+        <select class="form-input" id="fCurrency" style="width:90px">
+          <option value="UAH">₴ UAH</option>
+          <option value="USD">$ USD</option>
+          <option value="EUR">€ EUR</option>
+        </select>
       </div>
       <button class="submit-btn" onclick="addTx()">Додати</button>
     </div>`;
 }
 
 let addType = 'income';
+let searchQuery = '';
+let sortOrder = 'newest';
 function setType(t) {
   addType = t;
   document.getElementById('btnIncome').className = 'type-btn income' + (t==='income'?' active':'');
@@ -388,14 +485,27 @@ function addTx() {
   if (!amount || amount <= 0) { alert('Введіть суму'); return; }
   if (!date) { alert('Введіть дату'); return; }
 
+  const currency = document.getElementById('fCurrency').value;
   const finalAmount = addType === 'income' ? amount : -amount;
-  transactions.unshift({ id: nextId++, date, category: cat || '(без категорії)', account, amount: finalAmount, currency: 'UAH' });
+  transactions.unshift({ id: nextId++, date, category: cat || '(без категорії)', account, amount: finalAmount, currency });
   save();
   switchView('history');
 }
 
 function loadMore() {
   showCount += 40;
+  renderMain();
+}
+
+function setSearch(q) {
+  searchQuery = q;
+  showCount = 40;
+  renderMain();
+}
+
+function setSort(s) {
+  sortOrder = s;
+  showCount = 40;
   renderMain();
 }
 
