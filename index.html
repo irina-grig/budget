@@ -455,14 +455,6 @@ function renderAdd() {
       <div class="form-row">
         <input class="form-input" id="fDate" type="date" value="${new Date().toISOString().slice(0,10)}" style="flex:1">
       </div>
-      <div class="form-row">
-        <select class="form-input" id="fAccount" style="flex:1">${accOptions}</select>
-        <select class="form-input" id="fCurrency" style="width:90px">
-          <option value="UAH">₴ UAH</option>
-          <option value="USD">$ USD</option>
-          <option value="EUR">€ EUR</option>
-        </select>
-      </div>
       <button class="submit-btn" onclick="addTx()">Додати</button>
     </div>`;
 }
